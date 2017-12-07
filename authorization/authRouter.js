@@ -26,5 +26,7 @@ module.exports = (router, expressApp, authRoutesMethods) => {
        long as we validate their username and password properly using the mode we'll
        implement later in this tutorial.
      */
-    router.post('/login', expressApp.oauth.grant());
+    router.post('/login', expressApp.oauth.grant(), authRoutesMethods.login);
+
+    return router
 };

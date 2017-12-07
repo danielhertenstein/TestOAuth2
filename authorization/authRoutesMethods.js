@@ -21,6 +21,7 @@ module.exports = injectedUserDBHelper => {
 
     return {
         registerUser: registerUser,
+        login: login
     }
 };
 
@@ -36,44 +37,34 @@ module.exports = injectedUserDBHelper => {
  * @param res - response to respond to client
  */
 function registerUser(req, res) {
-    // get the username and password:
-    const username = req.body.username;
-    const password = req.body.password;
+    console.log('authRoutesMethods: registerUser: req.body is:', req.body);
 
-    // validate the request
-    if (!isString(username) || !isString(password)) {
-        return sendResponse(res, "Invalid Credentials", true);
-    }
+    // Query db to see if the user exists already
+    userDBHelper.doesUserExist(req.body.username, (sqlError, doesUserExist) => {
+        // Check if the user exists
+        if (sqlError !== null || doesUserExist) {
+            // Message to give summary to client
+            const message = sqlError !== null ? "Operation unsuccessful" : "User already exists";
 
-    // query db to see if the user exists already
-    userDBHelper.doesUserExist(username).then(doesUserExist => {
+            // Detailed error message from callback
+            const error = sqlError !== null ? sqlError : "User already exists";
 
-        // check if the user doesn't exist
-        if (doesUserExist === false) {
+            sendResponse(res, message, sqlError);
 
-            /* now that we know the user doesn't exist, we attempt to store them in
-            the database. The userDBHelper.registerUserInDB() method returns a
-            promise which will only resolve if we have successfully stored the user
-             */
-            return userDBHelper.registerUserInDB(username, password);
-        } else {
-            // throw an error to break out of the promise chain
-            throw new Error('User already exists');
+            return;
         }
-    }).then(
 
-        /* This stage of the promise chain is reached if we successfully
-        stored the user. Therefore, we know that we did successfully store
-        the user we send the response to the client notifying them of this. */
-        sendResponse(res, "Registration was successful", null)
-    ).catch(error => {
-
-        /* If this part of the code gets called then we failed to register
-        the user either because they already exist, or because we failed to save
-        them in the db. So we notify the client that we failed to register the user.
-         */
-        sendResponse(res, "Failed to register user", error)
+        // Register the user in the db
+        userDBHelper.registerUserInDB(req.body.username, req.body.password, dataResponseObject => {
+            // Create message for the api response
+            const message = dataResponseObject.error === null ? "Registration was successful" : "Failed to register user";
+            sendResponse(res, message, dataResponseObject.error);
+        })
     });
+}
+
+function login(registerUserQuery, res) {
+
 }
 
 /**
@@ -97,13 +88,3 @@ function sendResponse(res, message, error) {
         });
 }
 
-/**
- *
- * Returns true the specified parameters is a string else it returns false
- *
- * @param parameter - the variable we're checking is a String
- * @return {boolean}
- */
-function isString(parameter) {
-    return parameter != null && (typeof parameter === "string" || parameter instanceof String);
-}

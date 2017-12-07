@@ -13,20 +13,17 @@ const bearerTokensDBHelper = require('./dbHelpers/bearerTokensDBHelper')(mySqlCo
 to users such as registering and retrieving them */
 const userDBHelper = require('./dbHelpers/userDBHelper')(mySqlConnection);
 
-/* This is a library used to help parse the body of the api requests. */
-const bodyParser = require('body-parser');
+// Here we instantiate the model we just made and inject the dbHelpers we use in it
+const oAuthModel = require('./authorization/accessTokenModel')(userDBHelper, bearerTokensDBHelper);
+
+// Here we require the node-oauth2-server library
+const oAuth2Server = require('node-oauth2-server');
 
 // Require express
 const express = require('express');
 
 // Initialize the express app
 const expressApp = express();
-
-// Here we require the node-oauth2-server library
-const oAuth2Server = require('node-ouath2-server');
-
-// Here we instantiate the model we just made and inject the dbHelpers we use in it
-const oAuthModel = require('./authorization/accessTokenModel')(userDBHelper, bearerTokensDBHelper);
 
 /* Now we instantiate the oAuth2Server and pass in an object which tells the
 password library that we're using the password grant type and give it the model
@@ -43,18 +40,21 @@ const authRoutesMethods = require('./authorization/authRoutesMethods')(userDBHel
 // Now we instantiate the authRouter module and inject all of its dependencies
 const authRouter = require('./authorization/authRouter')(express.Router(), expressApp, authRoutesMethods);
 
+/* This is a library used to help parse the body of the api requests. */
+const bodyParser = require('body-parser');
+
+/* Set the bodyParser to parse the urlencoded post data */
+expressApp.use(bodyParser.urlencoded({extended: true}));
+
+// Setup the oAuth error handling
+expressApp.use(expressApp.oauth.errorHandler());
+
 /* Here we assign the authRouter as middleware in the express app.
 By doing this all requests sent to routes that start with /auth
 will be handled by this router */
 expressApp.use('/auth', authRouter);
 
-// Setup the oAuth error handling
-expressApp.use(expressApp.oauth.errorHandler());
-
-/* Set the bodyParser to parse the urlencoded post data */
-expressApp.use(bodyParser.urlencoded({extended: true}));
-
 // init the server
 expressApp.listen(port, () => {
-    console.log('listening on port ${port}');
+    console.log('listening on port ' + port);
 });
