@@ -82,8 +82,6 @@ function grantTypeAllowed(clientID, grantType, callback) {
 function getUser(username, password, callback) {
     // Try and get the user using the user's credentials
     userDBHelper.getUserFromCredentials(username, password)
-        .then(user => callback(false, user))
-        .catch(error => callback(error, null));
 }
 
 /**
