@@ -23,7 +23,14 @@ const express = require('express');
 // Initialize the express app
 const expressApp = express();
 
+// Here we require the authRoutesMethods object from the module that we just made
+const authRoutesMethods = require('./authorization/authRoutesMethods')(userDBHelper);
+
+// Now we instantiate the authRouter module and inject all of its dependencies
+const authRouter = require('./authorization/authRouter')(express.Router(), expressApp, authRoutesMethods);
+
 // MARK: -------------------- REQUIRED OBJECTS
+
 
 // MARK: -------------------- SET UP MIDDLEWARE
 
