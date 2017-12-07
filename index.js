@@ -1,4 +1,3 @@
-// MARK: -------------------- REQUIRED OBJECTS
 
 /* Create the port that we're connecting to */
 const port = 8080;
@@ -23,27 +22,39 @@ const express = require('express');
 // Initialize the express app
 const expressApp = express();
 
+// Here we require the node-oauth2-server library
+const oAuth2Server = require('node-ouath2-server');
+
+// Here we instantiate the model we just made and inject the dbHelpers we use in it
+const oAuthModel = require('./authorization/accessTokenModel')(userDBHelper, bearerTokensDBHelper);
+
+/* Now we instantiate the oAuth2Server and pass in an object which tells the
+password library that we're using the password grant type and give it the model
+we just required. */
+expressApp.oauth = oAuth2Server({
+    model: oAuthModel,
+    grants: ['password'],
+    debug: true
+});
+
 // Here we require the authRoutesMethods object from the module that we just made
 const authRoutesMethods = require('./authorization/authRoutesMethods')(userDBHelper);
 
 // Now we instantiate the authRouter module and inject all of its dependencies
 const authRouter = require('./authorization/authRouter')(express.Router(), expressApp, authRoutesMethods);
 
-// MARK: -------------------- REQUIRED OBJECTS
+/* Here we assign the authRouter as middleware in the express app.
+By doing this all requests sent to routes that start with /auth
+will be handled by this router */
+expressApp.use('/auth', authRouter);
 
-
-// MARK: -------------------- SET UP MIDDLEWARE
+// Setup the oAuth error handling
+expressApp.use(expressApp.oauth.errorHandler());
 
 /* Set the bodyParser to parse the urlencoded post data */
 expressApp.use(bodyParser.urlencoded({extended: true}));
-
-// MARK: -------------------- SET UP MIDDLEWARE
-
-// MARK: -------------------- INITIALIZE THE SERVER
 
 // init the server
 expressApp.listen(port, () => {
     console.log('listening on port ${port}');
 });
-
-// MARK: -------------------- INITIALIZE THE SERVER
